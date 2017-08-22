@@ -2,17 +2,32 @@
 // Python.h já inclui alguns .h padrão (stdio, string, errno, stdlib)
 #include <Python.h>
 
-static PyObject* sum(PyObject* self, PyObject* args);
-static PyObject* sum_tuple(PyObject* self, PyObject* args);
-
-static PyObject* list_new(PyTypeObject* type, PyObject* args, PyObject* kwargs);
+struct node {
+    int val;
+    struct node* next;
+};
 
 typedef struct {
     PyObject_HEAD
-    long* head;
-    long* tail;
-    long* cur;
+    struct node* head;
+    struct node* tail;
+    struct node* cur;
+    int len;
 } list;
+
+static PyObject* sum(PyObject* self, PyObject* args);
+static PyObject* sum_tuple(PyObject* self, PyObject* args);
+
+static int list_init(list* self, PyObject* args, PyObject* kwargs);
+static PyObject* list_append(list* self, PyObject* args);
+static PyObject* list_str(list* self);
+static PyObject* list_iter(list* self);
+static PyObject* list_iternext(list* self);
+
+static PyMethodDef list_methods[] = {
+    { "append", (PyCFunction)list_append, METH_VARARGS, "Append an element to the list." },
+    { NULL }
+};
 
 static PyTypeObject list_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -24,13 +39,13 @@ static PyTypeObject list_type = {
     0,                          /* tp_getattr */
     0,                          /* tp_setattr */
     0,                          /* tp_as_async */
-    0,                          /* tp_repr */
+    (reprfunc)list_str,         /* tp_repr */
     0,                          /* tp_as_number */
     0,                          /* tp_as_sequence */
     0,                          /* tp_as_mapping */
     0,                          /* tp_hash */
     0,                          /* tp_call */
-    0,                          /* tp_str */
+    (reprfunc)list_str,         /* tp_str */
     0,                          /* tp_getattro */
     0,                          /* tp_setattro */
     0,                          /* tp_as_buffer */
@@ -40,18 +55,19 @@ static PyTypeObject list_type = {
     0,                          /* tp_clear */
     0,                          /* tp_richcompare */
     0,                          /* tp_weaklistoffset */
-    0,                          /* tp_iter */
-    0,                          /* tp_iternext */
-    0,                          /* tp_methods */
+    (getiterfunc)list_iter,     /* tp_iter */
+    (iternextfunc)list_iternext,/* tp_iternext */
+    list_methods,               /* tp_methods */
     0,                          /* tp_members */
+    0,                          /* tp_getset */
     0,                          /* tp_base */
     0,                          /* tp_dict */
     0,                          /* tp_descr_get */
     0,                          /* tp_descr_set */
     0,                          /* tp_dictoffset */
-    0,                          /* tp_init */
+    (initproc)list_init,        /* tp_init */
     0,                          /* tp_alloc */
-    list_new,                   /* tp_new */
+    0,                          /* tp_new */
 };
 
 static PyMethodDef methods[] = {
@@ -126,3 +142,61 @@ static PyObject* sum_tuple(PyObject* self, PyObject* args) {
     return PyFloat_FromDouble(sum);
 }
 
+
+static int list_init(list* self, PyObject* args, PyObject* kwargs) {
+    self->head = NULL;
+    self->tail = NULL;
+    self->cur = NULL;
+    self->len = 0;
+
+    return 0;
+}
+
+static PyObject* list_append(list* self, PyObject* args) {
+    int elem;
+
+    if (!PyArg_ParseTuple(args, "i", &elem)) {
+        return NULL;
+    }
+
+    struct node* new_node = malloc(sizeof(struct node));
+    new_node->val = elem;
+    new_node->next = NULL;
+
+    if (!self->head) {
+        self->head = new_node;
+        self->tail = self->head;
+    }
+    else {
+        self->tail->next = new_node;
+        self->tail = new_node;
+    }
+
+    self->len++;
+
+    Py_RETURN_NONE;
+}
+
+static PyObject* list_str(list* self) {
+    return PyUnicode_FromFormat("list object with %d elements", self->len);
+}
+
+static PyObject* list_iter(list* self) {
+    printf("list_iter\n");
+    Py_INCREF(self);
+    self->cur = self->head;
+    return (PyObject*)self;
+}
+
+static PyObject* list_iternext(list* self) {
+    printf("list_iternext\n");
+    if (self->cur) {
+        PyObject* ret = Py_BuildValue("i", self->cur->val);
+        self->cur = self->cur->next;
+        return ret;
+    }
+    else {
+        PyErr_SetNone(PyExc_StopIteration);
+        return NULL;
+    }
+}
