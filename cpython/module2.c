@@ -16,11 +16,11 @@ static PyMethodDef methods[] = {
 };
 
 static struct PyModuleDef module = {
-    PyModuleDef_HEAD_INIT,
-    "grupy",
-    "Doc for grupy2 module.",
-    -1,
-    methods
+    PyModuleDef_HEAD_INIT,      // must always be PyModuleDef_HEAD_INIT
+    "grupy",                    // module name
+    "Doc for grupy2 module.",   // module docstring
+    -1,                         // module memory area size
+    methods                     // table of module-level functions
 };
 
 PyMODINIT_FUNC PyInit_grupy2(void) {
