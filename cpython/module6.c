@@ -8,6 +8,7 @@ struct node {
 struct stack {
     PyObject_HEAD
     struct node* top;
+    struct node* cur;
     int len;
 };
 
@@ -79,6 +80,27 @@ static void stack_dealloc(PyObject* self) {
     }
 }
 
+static PyObject* stack_iter(PyObject* self) {
+    Py_INCREF(self);
+    struct stack* stack = (struct stack*) self;
+    stack->cur = stack->top;
+    return self;
+}
+
+static PyObject* stack_iternext(PyObject* self) {
+    struct stack* stack = (struct stack*) self;
+
+    if (stack->cur) {
+        PyObject* val = Py_BuildValue("i", stack->cur->val);
+        stack->cur = stack->cur->next;
+        return val;
+    }
+    else {
+        PyErr_SetNone(PyExc_StopIteration);
+        return NULL;
+    }
+}
+
 static PyTypeObject stack_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "grupy.Stack",              /* tp_name */
@@ -105,8 +127,8 @@ static PyTypeObject stack_type = {
     NULL,                       /* tp_clear */
     NULL,                       /* tp_richcompare */
     0,                          /* tp_weaklistoffset */
-    NULL,                       /* tp_iter */
-    NULL,                       /* tp_iternext */
+    (getiterfunc)stack_iter,    /* tp_iter */
+    (iternextfunc)stack_iternext,/* tp_iternext */
     stack_methods,              /* tp_methods */
     NULL,                       /* tp_members */
     NULL,                       /* tp_getset */
@@ -123,11 +145,11 @@ static PyTypeObject stack_type = {
 static struct PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
     "grupy",
-    "Doc for grupy5 module.",
+    "Doc for grupy6 module.",
     -1
 };
 
-PyMODINIT_FUNC PyInit_grupy5(void) {
+PyMODINIT_FUNC PyInit_grupy6(void) {
     PyObject* m;
 
     stack_type.tp_new = PyType_GenericNew;
